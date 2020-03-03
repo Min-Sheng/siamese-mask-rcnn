@@ -17,6 +17,7 @@ MASK_RCNN_MODEL_PATH = 'Mask_RCNN/'
 if MASK_RCNN_MODEL_PATH not in sys.path:
     sys.path.append(MASK_RCNN_MODEL_PATH)
     
+from samples.fss_cell import fss_cell
 from samples.coco import coco
 from mrcnn import utils
 from mrcnn import model as modellib
@@ -299,6 +300,67 @@ def siamese_data_generator(dataset, config, shuffle=True, augmentation=imgaug.au
                 
                 
 ### Dataset Utils ###
+
+class IndexedFssCellDataset(fss_cell.CocoDataset):
+    
+    def __init__(self):
+        super(IndexedFssCellDataset, self).__init__()
+        self.active_classes = []
+
+    def set_active_classes(self, active_classes):
+        """active_classes could be an array of integers (class ids), or
+           a filename (string) containing these class ids (one number per line)"""
+        if type(active_classes) == str:
+            with open(active_classes, 'r') as f:
+                content = f.readlines()
+            active_classes = [int(x.strip()) for x in content]
+        self.active_classes = list(active_classes)
+        
+    def get_class_ids(self, active_classes, dataset_dir, subset):
+        coco = COCO("{}/instances_fss_cell_poly_{}.json".format(dataset_dir, subset))
+        class_ids = sorted(list(filter(lambda c: c in coco.getCatIds(), self.active_classes)))
+        return class_ids
+
+        self.class_ids_with_holes = class_ids
+    
+    def build_indices(self):
+
+        self.image_category_index = IndexedFssCellDataset._build_image_category_index(self)
+        self.category_image_index = IndexedFssCellDataset._build_category_image_index(self.image_category_index)
+
+    def _build_image_category_index(dataset):
+
+        image_category_index = []
+        for im in range(len(dataset.image_info)):
+            # List all classes in an image
+            coco_class_ids = list(\
+                                  np.unique(\
+                                            [dataset.image_info[im]['annotations'][i]['category_id']\
+                                             for i in range(len(dataset.image_info[im]['annotations']))]\
+                                           )\
+                                 )
+            # Map 91 class IDs 81 to Mask-RCNN model type IDs
+            class_ids = [dataset.map_source_class_id("fss_cell.{}".format(coco_class_ids[k]))\
+                         for k in range(len(coco_class_ids))]
+            # Put list together
+            image_category_index.append(class_ids)
+
+        return image_category_index
+
+    def _build_category_image_index(image_category_index):
+
+        category_image_index = []
+        # Loop through all 81 Mask-RCNN classes/categories
+        for category in range(max(image_category_index)[0]+1):
+            # Find all images corresponding to the selected class/category 
+            images_per_category = np.where(\
+                [any(image_category_index[i][j] == category\
+                 for j in range(len(image_category_index[i])))\
+                 for i in range(len(image_category_index))])[0]
+            # Put list together
+            category_image_index.append(images_per_category)
+
+        return category_image_index
 
 class IndexedCocoDataset(coco.CocoDataset):
     
