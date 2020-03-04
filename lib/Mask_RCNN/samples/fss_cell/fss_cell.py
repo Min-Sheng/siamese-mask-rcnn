@@ -114,7 +114,6 @@ class CocoDataset(utils.Dataset):
         else:
             # All images
             image_ids = list(coco.imgs.keys())
-
         # Add classes
         for i in class_ids:
             self.add_class("fss_cell", i, coco.loadCats(i)[0]["name"])
@@ -159,8 +158,8 @@ class CocoDataset(utils.Dataset):
                                    image_info["width"])
                 # Some objects are so small that they're less than 1 pixel area
                 # and end up rounded out. Skip those objects.
-                if m.max() < 1:
-                    continue
+                #if m.max() < 1:
+                #    continue
                 # Is it a crowd? If so, use a negative class ID.
                 if annotation['iscrowd']:
                     # Use negative class ID for crowds
@@ -231,7 +230,7 @@ def build_coco_results(dataset, image_ids, rois, class_ids, scores, masks):
 
             result = {
                 "image_id": image_id,
-                "category_id": dataset.get_source_class_id(class_id, "coco"),
+                "category_id": dataset.get_source_class_id(class_id, "fss_cell"),
                 "bbox": [bbox[1], bbox[0], bbox[3] - bbox[1], bbox[2] - bbox[0]],
                 "score": score,
                 "segmentation": maskUtils.encode(np.asfortranarray(mask))

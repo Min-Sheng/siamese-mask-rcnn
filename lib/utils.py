@@ -531,7 +531,7 @@ def evaluate_dataset(model, dataset, dataset_object, eval_type="bbox", dataset_t
     eval_type: "bbox" or "segm" for bounding box or segmentation evaluation
     limit: if not 0, it's the number of images to use for evaluation
     """
-    assert dataset_type in ['coco']
+    assert dataset_type in ['coco', 'fss_cell']
     # Pick COCO images from the dataset
     image_ids = image_ids or dataset.image_ids
 
@@ -614,6 +614,12 @@ def evaluate_dataset(model, dataset, dataset_object, eval_type="bbox", dataset_t
                                                    r["rois"], r["class_ids"],
                                                    r["scores"],
                                                    r["masks"].astype(np.uint8))
+            elif dataset_type == 'fss_cell':
+                image_results = fss_cell.build_coco_results(dataset, dataset_image_ids[i:i + 1],
+                                                   r["rois"], r["class_ids"],
+                                                   r["scores"],
+                                                   r["masks"].astype(np.uint8))
+            
             results.extend(image_results)
     
     # Load results. This modifies results with additional attributes.
@@ -645,7 +651,7 @@ def display_results(target, image, boxes, masks, class_ids,
                       scores=None, title="",
                       figsize=(16, 16), ax=None,
                       show_mask=True, show_bbox=True,
-                      colors=None, captions=None):
+                      colors=None, show_caption=False, captions=None):
     """
     boxes: [num_instance, (y1, x1, y2, x2, class_id)] in image coordinates.
     masks: [height, width, num_instances]
@@ -708,20 +714,21 @@ def display_results(target, image, boxes, masks, class_ids,
             ax.add_patch(p)
 
         # Label
-        if not captions:
-            class_id = class_ids[i]
-            score = scores[i] if scores is not None else None
-            x = random.randint(x1, (x1 + x2) // 2)
-            caption = "{:.3f}".format(score) if score else 'no score'
-        else:
-            caption = captions[i]
-        ax.text(x1, y1 + 8, caption,
-                color='w', size=11, backgroundcolor="none")
+        if show_caption:
+            if not captions:
+                class_id = class_ids[i]
+                score = scores[i] if scores is not None else None
+                x = random.randint(x1, (x1 + x2) // 2)
+                caption = "{:.3f}".format(score) if score else 'no score'
+            else:
+                caption = captions[i]
+            ax.text(x1, y1 + 8, caption,
+                    color='w', size=11, backgroundcolor="none")
 
         # Mask
         mask = masks[:, :, i]
         if show_mask:
-            masked_image = visualize.apply_mask(masked_image, mask, color)
+            masked_image = visualize.apply_mask(masked_image, mask, color, alpha=0.35)
 
         # Mask Polygon
         # Pad to ensure proper polygons for masks that touch image edges.

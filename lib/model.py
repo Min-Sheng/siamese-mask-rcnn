@@ -535,8 +535,8 @@ class SiameseMaskRCNN(modellib.MaskRCNN):
             loss = (
                 tf.reduce_mean(layer.output, keepdims=True)
                 * self.config.LOSS_WEIGHTS.get(name, 1.))
-            #self.keras_model.metrics_tensors.append(loss)
-            self.keras_model.add_metric(loss, name)
+            self.keras_model.metrics_tensors.append(loss)
+            #self.keras_model.add_metric(loss, name)
             
     
     def set_trainable(self, layer_regex, keras_model=None, indent=0, verbose=0):
@@ -676,7 +676,7 @@ class SiameseMaskRCNN(modellib.MaskRCNN):
         # Callbacks
         callbacks = [
             keras.callbacks.TensorBoard(log_dir=self.log_dir,
-                                        histogram_freq=0, write_graph=True, write_images=False),
+                                        histogram_freq=0, write_graph=False, write_images=False),
             keras.callbacks.ModelCheckpoint(self.checkpoint_path,
                                             verbose=0, save_weights_only=True),
         ]
